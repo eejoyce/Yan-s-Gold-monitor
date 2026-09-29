@@ -204,13 +204,18 @@
     <div class="pg-main">
       <span class="tag">你在用的</span>
       <div class="name">招商银行 · 黄金账户（元/克）</div>
-      <div class="price num down" id="pg_cmb_mid">901.50</div>
-      <div class="chg num down" id="pg_cmb_chg">-14.39 &nbsp; -1.57%</div>
-      <div class="pg-quotes">
-        <div class="q"><div class="l">客户买入 / 招行卖出</div><div class="v num up" id="pg_cmb_buy">902.80</div></div>
-        <div class="q"><div class="l">客户卖出 / 招行买入</div><div class="v num down" id="pg_cmb_sell">900.20</div></div>
-        <div class="q sp"><div class="l">招行买卖点差</div><div class="v num" id="pg_cmb_sprd">2.60</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:10px 0 6px">
+        <div>
+          <div style="font-size:11px;color:var(--txt3);margin-bottom:2px">客户买入 / 招行卖出</div>
+          <div class="price num up" id="pg_cmb_buy" style="font-size:38px">902.80</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--txt3);margin-bottom:2px">客户卖出 / 招行买入</div>
+          <div class="price num down" id="pg_cmb_sell" style="font-size:38px">900.20</div>
+        </div>
       </div>
+      <div class="chg num down" id="pg_cmb_chg" style="font-size:12px">中间价 <span id="pg_cmb_mid">901.50</span> · <span id="pg_cmb_sprd">2.60</span> 点差 · -14.39 (-1.57%)</div>
+      <div class="pg-quotes">
       <div class="pg-tags">
         <span class="pt">实时报价</span><span class="pt">交易便捷</span><span class="pt">可兑换实物金</span><span class="pt">黄金定投</span><span class="pt">委托挂单</span>
       </div>
@@ -597,7 +602,8 @@
     mid = mid + CALIB_OFFSET;
     var M = mid.toFixed(2);
     s("pg_cmb_mid",M); s("pg_cmb_buy",(mid+1.30).toFixed(2)); s("pg_cmb_sell",(mid-1.30).toFixed(2));
-    s("c_pg",M); s("yr_now",M);
+    s("pg_cmb_sprd","2.60");
+    s("c_pg",M); s("yr_now",(mid+1.30).toFixed(2));
   }
   // 校准按钮
   (function(){
