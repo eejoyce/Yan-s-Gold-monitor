@@ -197,7 +197,8 @@
   <!-- API Key 配置条 -->
   <div style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px">
     <span style="color:var(--txt3)">TwelveData API Key:</span>
-    <input id="apiKeyInput" type="text" placeholder="粘贴你的 key（免费申请 twelvedata.com）" style="flex:1;min-width:260px;background:var(--panel2);border:1px solid var(--line2);color:var(--txt);border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--mono)">
+    <input id="apiKeyInput" type="password" placeholder="粘贴你的 key（免费申请 twelvedata.com）" style="flex:1;min-width:260px;background:var(--panel2);border:1px solid var(--line2);color:var(--txt);border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--mono)">
+    <button id="apiKeyToggle" style="background:var(--panel2);border:1px solid var(--line2);color:var(--txt3);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px" title="显示/隐藏">👁</button>
     <button id="apiKeySave" style="background:var(--goldbg);border:1px solid var(--gold);color:var(--gold2);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px">保存并刷新</button>
     <span id="apiKeyStatus" style="color:var(--txt3)">未配置 → 当前为演示数据</span>
   </div>
@@ -574,6 +575,11 @@
     var saveBtn=document.getElementById("apiKeySave");
     if(input){input.value=TD_KEY;}
     if(status){status.textContent=TD_KEY?"已配置 → 实时模式":"未配置 → 当前为演示数据";}
+    var toggleBtn=document.getElementById("apiKeyToggle");
+    if(toggleBtn){toggleBtn.onclick=function(){
+      var inp=document.getElementById("apiKeyInput");
+      inp.type = inp.type==="password" ? "text" : "password";
+    };}
     if(saveBtn){saveBtn.onclick=function(){
       var k=input.value.trim();
       localStorage.setItem("twd_key",k);
