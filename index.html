@@ -839,41 +839,55 @@
 
 /* ================= 浮窗点击切换 ================= */
 (function(){
-  function closeTip(icon){
-    var tip = icon.querySelector(".info-tip");
-    icon.classList.remove("open");
-    if(tip && tip.parentNode===document.body){
-      icon.appendChild(tip); // move back
-      tip.style.left=""; tip.style.top="";
-    }
+  // 页面加载时清理可能残留的游离浮窗
+  function cleanupOrphans(){
+    document.querySelectorAll("body > .info-tip, .wrap > .info-tip").forEach(function(t){
+      t.remove();
+    });
   }
-  document.addEventListener("click", function(e){
-    var icon = e.target.closest(".info-icon");
-    if(icon){
+  cleanupOrphans();
+
+  function closeAll(){
+    document.querySelectorAll(".info-icon.open").forEach(function(icon){
+      var tip = icon.querySelector(".info-tip");
+      icon.classList.remove("open");
+      if(tip){ tip.style.display="none"; }
+    });
+  }
+
+  // 用事件委托绑定每个 ? 图标
+  document.querySelectorAll(".info-icon").forEach(function(icon){
+    var tip = icon.querySelector(".info-tip");
+    if(!tip) return;
+    // 初始隐藏
+    tip.style.display = "none";
+    icon.addEventListener("click", function(e){
       e.stopPropagation();
       var wasOpen = icon.classList.contains("open");
-      document.querySelectorAll(".info-icon.open").forEach(closeTip);
+      closeAll();
       if(!wasOpen){
-        var tip = icon.querySelector(".info-tip");
-        if(tip){
-          icon.classList.add("open");
-          document.body.appendChild(tip);
-          var rect = icon.getBoundingClientRect();
-          var tw=280, th=tip.offsetHeight||120;
-          var left = rect.left - tw/2 + 7;
-          left = Math.max(8, Math.min(window.innerWidth - tw - 8, left));
-          var top = rect.top - th - 8;
-          if(top < 8) top = rect.bottom + 8;
-          tip.style.left = left+"px";
-          tip.style.top = top+"px";
-        }
+        icon.classList.add("open");
+        tip.style.display = "block";
+        var rect = icon.getBoundingClientRect();
+        var tw = Math.min(280, window.innerWidth - 24);
+        tip.style.width = tw + "px";
+        // 先设置 display 才能量高度
+        var th = tip.offsetHeight || 120;
+        var left = rect.left - tw/2 + 7;
+        left = Math.max(8, Math.min(window.innerWidth - tw - 8, left));
+        var top = rect.top - th - 8;
+        if(top < 8) top = rect.bottom + 8;
+        tip.style.left = left + "px";
+        tip.style.top = top + "px";
       }
-      return;
-    }
-    document.querySelectorAll(".info-icon.open").forEach(closeTip);
+    });
   });
-  window.addEventListener("resize", function(){
-    document.querySelectorAll(".info-icon.open").forEach(closeTip);
+
+  // 点击页面其他地方关闭（不影响其他按钮）
+  document.addEventListener("click", function(e){
+    if(!e.target.closest(".info-icon") && !e.target.closest(".info-tip")){
+      closeAll();
+    }
   });
 })();
 
