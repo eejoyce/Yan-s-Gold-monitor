@@ -125,6 +125,16 @@
   .newsrow .assoc{font-size:11px;color:var(--gold2);margin-top:3px}
 
   /* 告警 */
+  .score-panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
+  .score-gauge{width:100%;height:14px;background:linear-gradient(to right,#e5484d 0%,#f5a623 30%,#8b98a5 50%,#30a46c 70%,#e5484d 100%);border-radius:7px;position:relative;margin:10px 0}
+  .score-pointer{position:absolute;top:-6px;width:4px;height:26px;background:#fff;border-radius:2px;box-shadow:0 0 6px rgba(0,0,0,.5);transition:left .6s}
+  .score-num{font-size:32px;font-weight:800;font-family:var(--mono);text-align:center}
+  .score-verdict{text-align:center;font-size:13px;color:var(--txt2);margin-top:4px}
+  .factor-score{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(34,48,63,.4);font-size:12px}
+  .factor-score:last-child{border:none}
+  .factor-score .fs{font-family:var(--mono);font-weight:700}
+  .factor-score .fs.bull{color:#30a46c}
+  .factor-score .fs.bear{color:#e5484d}
   .alert{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
   .alertfeed{margin-top:14px;background:var(--panel2);border:1px dashed var(--line2);border-radius:12px;padding:4px 16px}
   .alertrow{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid rgba(34,48,63,.55);font-size:12.5px;color:var(--txt)}
@@ -303,6 +313,23 @@
   <!-- ===== 新闻时间线 ===== -->
   <div class="sec" style="display:flex;align-items:center;gap:10px"><h2>影响金价的新闻时间线</h2><span class="hint">每分钟轮询 · 去重 · 情感标签 · 关联品种</span><span class="ts" id="newsTs" style="font-size:11px;color:var(--txt3);font-family:var(--mono)">更新于 --:--:--</span> <span class="refresh-btn" id="newsRefresh" title="刷新新闻">⟳</span></div>
   <div class="news" id="news"></div>
+
+  <!-- ===== 多空评分 ===== -->
+  <div class="sec"><h2>多空评分（启发式参考）</h2><span class="hint">基于5维度当前值 + 技术动量 · -10极空 ~ +10极多 · 不构成投资建议</span></div>
+  <div class="score-panel">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <div class="score-num" id="scoreNum">0.0</div>
+        <div class="score-gauge"><div class="score-pointer" id="scorePointer" style="left:50%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--txt3)"><span>← 利空</span><span>中性</span><span>利多 →</span></div>
+        <div class="score-verdict" id="scoreVerdict">计算中...</div>
+      </div>
+      <div id="factorScores"></div>
+    </div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(34,48,63,.4);font-size:11px;color:var(--txt3)">
+      <b>评分逻辑：</b>美元指数↑利空(-2)，美债收益率↑利空(-2)，伦敦金动量↑利多(+2)，人民币贬值利多(+1)，ETF净流入利多(+1)。评分≥+3偏多，≤-3偏空。仅供参考，不构成投资建议。
+    </div>
+  </div>
 
   <!-- ===== 告警 ===== -->
   <div class="sec"><h2>账户金告警</h2><span class="hint">价格突破 · 国际异动 · 重大新闻 · 自定义触发条件</span></div>
@@ -746,6 +773,71 @@
       if(map[card.dataset.inst]) setTs(card, now());
     });
   };
+})();
+
+/* ================= 多空评分算法 ================= */
+(function(){
+  function calcScore(map){
+    var factors=[], total=0;
+    if(map.xauusd){
+      var pct=map.xauusd.change_pct||0;
+      var sc=Math.max(-2,Math.min(2,pct*0.5));
+      factors.push({name:"伦敦金动量", val:(pct>=0?"+":"")+pct.toFixed(2)+"%", score:sc});
+      total+=sc;
+    }
+    if(map.dxy){
+      var dp=map.dxy.change_pct||0;
+      var sc=Math.max(-2,Math.min(2,-dp*1.5));
+      factors.push({name:"美元指数", val:(dp>=0?"+":"")+dp.toFixed(2)+"%", score:sc});
+      total+=sc;
+    }
+    if(map.us10y){
+      var up=map.us10y.change_pct||0;
+      var sc=Math.max(-2,Math.min(2,-up*2));
+      factors.push({name:"美债10年收益率", val:(up>=0?"+":"")+up.toFixed(2)+"%", score:sc});
+      total+=sc;
+    }
+    if(map.usdcny){
+      var cp=map.usdcny.change_pct||0;
+      var sc=Math.max(-1,Math.min(1,cp*3));
+      factors.push({name:"美元/人民币汇率", val:(cp>=0?"+":"")+cp.toFixed(2)+"%", score:sc});
+      total+=sc;
+    }
+    factors.push({name:"黄金ETF持仓", val:"静态参考", score:0.5});
+    total+=0.5;
+    total=Math.round(total*10)/10;
+    var numEl=document.getElementById("scoreNum");
+    if(numEl){
+      numEl.textContent=(total>=0?"+":"")+total.toFixed(1);
+      numEl.style.color=total>=3?"#30a46c":(total<=-3?"#e5484d":"#8b98a5");
+    }
+    var ptrEl=document.getElementById("scorePointer");
+    if(ptrEl){
+      var pct=50+(total/10)*50;
+      pct=Math.max(2,Math.min(98,pct));
+      ptrEl.style.left=pct+"%";
+    }
+    var verEl=document.getElementById("scoreVerdict");
+    if(verEl){
+      if(total>=5) verEl.textContent="短期偏多 · 多头占优";
+      else if(total>=2) verEl.textContent="温和偏多 · 谨慎看多";
+      else if(total>-2) verEl.textContent="中性震荡 · 方向不明";
+      else if(total>-5) verEl.textContent="温和偏空 · 谨慎看空";
+      else verEl.textContent="短期偏空 · 空头占优";
+    }
+    var fsEl=document.getElementById("factorScores");
+    if(fsEl){
+      fsEl.innerHTML=factors.map(function(f){
+        var cls=f.score>=0?"bull":"bear";
+        var sign=f.score>=0?"+":"";
+        return '<div class="factor-score"><span>'+f.name+' <span style="color:var(--txt3)">('+f.val+')</span></span><span class="fs '+cls+'">'+sign+f.score.toFixed(1)+'</span></div>';
+      }).join("");
+    }
+  }
+  window.__calcScore=calcScore;
+  calcScore({xauusd:{price:4125.61,change_pct:-0.35},dxy:{price:100.765,change_pct:0.12},us10y:{price:4.35,change_pct:0.08},usdcny:{price:6.71,change_pct:0.02}});
+  var _orig=window.__fcTick;
+  window.__fcTick=function(map){ if(_orig) _orig(map); calcScore(map); };
 })();
 
 /* ================= 告警开关 ================= */
