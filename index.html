@@ -88,9 +88,10 @@
   .fc .eff.neu{background:var(--panel2);color:var(--txt2);border:1px solid var(--line2)}
   .fc .note{font-size:11px;color:var(--txt3);margin-top:6px;line-height:1.5}
   .fc .l{display:flex;align-items:center;gap:4px}
-  .info-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--line2);color:var(--txt3);font-size:10px;cursor:help;position:relative;flex:0 0 auto}
+  .info-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--line2);color:var(--txt3);font-size:10px;cursor:pointer;flex:0 0 auto;position:relative}
   .info-icon:hover{border-color:var(--gold);color:var(--gold2)}
-  .info-tip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);width:260px;background:#0F151D;border:1px solid var(--gold);border-radius:8px;padding:10px 12px;font-size:11.5px;line-height:1.6;color:var(--txt);z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.5);text-align:left;font-family:var(--sans)}
+  .info-icon.open{border-color:var(--gold);color:var(--gold2)}
+  .info-tip{display:none;width:280px;background:#0F151D;border:1px solid var(--gold);border-radius:8px;padding:12px 14px;font-size:12px;line-height:1.7;color:var(--txt);z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,.6);text-align:left;font-family:var(--sans);position:fixed}
   .info-tip b{color:var(--gold2)}
   .refresh-btn{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--line2);color:var(--txt3);font-size:11px;cursor:pointer;flex:0 0 auto;transition:.2s;background:none}
   .refresh-btn:hover{border-color:var(--gold);color:var(--gold2)}
@@ -98,7 +99,6 @@
   @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
   .fc .ts{font-size:10px;color:var(--txt3);margin-top:4px;font-family:var(--mono)}
   .fc .ts.ok{color:var(--down)}
-  .info-icon:hover .info-tip{display:block}
 
   /* 图表 */
   .grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-top:14px}
@@ -820,6 +820,46 @@
   calcScore({xauusd:{price:4125.61,change_pct:-0.35},dxy:{price:100.765,change_pct:0.12},us10y:{price:4.35,change_pct:0.08},usdcny:{price:6.71,change_pct:0.02}});
   var _orig=window.__fcTick;
   window.__fcTick=function(map){ if(_orig) _orig(map); calcScore(map); };
+})();
+
+/* ================= 浮窗点击切换 ================= */
+(function(){
+  function closeTip(icon){
+    var tip = icon.querySelector(".info-tip");
+    icon.classList.remove("open");
+    if(tip && tip.parentNode===document.body){
+      icon.appendChild(tip); // move back
+      tip.style.left=""; tip.style.top="";
+    }
+  }
+  document.addEventListener("click", function(e){
+    var icon = e.target.closest(".info-icon");
+    if(icon){
+      e.stopPropagation();
+      var wasOpen = icon.classList.contains("open");
+      document.querySelectorAll(".info-icon.open").forEach(closeTip);
+      if(!wasOpen){
+        var tip = icon.querySelector(".info-tip");
+        if(tip){
+          icon.classList.add("open");
+          document.body.appendChild(tip);
+          var rect = icon.getBoundingClientRect();
+          var tw=280, th=tip.offsetHeight||120;
+          var left = rect.left - tw/2 + 7;
+          left = Math.max(8, Math.min(window.innerWidth - tw - 8, left));
+          var top = rect.top - th - 8;
+          if(top < 8) top = rect.bottom + 8;
+          tip.style.left = left+"px";
+          tip.style.top = top+"px";
+        }
+      }
+      return;
+    }
+    document.querySelectorAll(".info-icon.open").forEach(closeTip);
+  });
+  window.addEventListener("resize", function(){
+    document.querySelectorAll(".info-icon.open").forEach(closeTip);
+  });
 })();
 
 /* ================= 告警开关 ================= */
