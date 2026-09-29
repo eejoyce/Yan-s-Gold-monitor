@@ -239,22 +239,6 @@
     </div>
   </div>
 
-  <!-- ===== 价格传导链 ===== -->
-  <div class="sec"><h2>账户金价格怎么来的</h2><span class="hint">人民币金价 = 国际金价 × 汇率 ÷ 31.1035 + 国内溢价 + 银行点差</span></div>
-  <div class="chain">
-    <div class="cstep"><div class="l">伦敦金现货</div><div class="v down" id="c_xau">4125.61</div><div class="l">美元/盎司</div></div>
-    <div class="op">×</div>
-    <div class="cstep"><div class="l">美元兑人民币</div><div class="v">6.71</div><div class="l">汇率</div></div>
-    <div class="op">÷</div>
-    <div class="cstep"><div class="l">1 盎司 = 31.1035 克</div><div class="v">31.1035</div><div class="l">常数</div></div>
-    <div class="op">→</div>
-    <div class="cstep"><div class="l">国际金价折算</div><div class="v">≈890.0</div><div class="l">元/克</div></div>
-    <div class="op">→</div>
-    <div class="cstep"><div class="l">上金所 Au9999</div><div class="v" id="c_au">900.89</div><div class="l">国内溢价 +1.2%</div></div>
-    <div class="op">→</div>
-    <div class="cstep final"><div class="l">银行账户金中间价</div><div class="v gold" id="c_pg">901.50</div><div class="l">元/克</div></div>
-  </div>
-
   <!-- ===== 影响因子 ===== -->
   <div class="sec"><h2>影响账户金价格的核心维度</h2><span class="hint">箭头 = 当前值对纸黄金方向的影响（红利多 / 绿利空）</span></div>
   <div class="factors">
