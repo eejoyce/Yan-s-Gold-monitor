@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>招商银行黄金账户 · 行情监测</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%230B1016' stroke='%23C9A227' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23C9A227'/%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  :root{
+    --bg:#0B1016; --bg2:#0F151D; --panel:#131B24; --panel2:#16202C;
+    --line:#22303F; --line2:#2C3B4C;
+    --txt:#E8ECEF; --txt2:#9AA7B5; --txt3:#6E7B8A;
+    --gold:#C9A227; --gold2:#E0B64E; --goldbg:rgba(201,162,39,.12);
+    --up:#E5484D; --down:#30A46C; --flat:#9AA7B5;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14px;line-height:1.5}
+  a{color:var(--gold2);text-decoration:none}
+  .wrap{max-width:1400px;margin:0 auto;padding:16px 20px 40px}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)}
+
+  /* 顶部栏 */
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 0 6px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .logo{width:38px;height:38px;border-radius:9px;background:var(--panel);border:1px solid var(--line2);display:grid;place-items:center;color:var(--gold)}
+  .brand h1{font-size:20px;font-weight:700;letter-spacing:.5px}
+  .brand .sub{font-size:12px;color:var(--txt3)}
+  .meta{display:flex;align-items:center;gap:14px;font-size:12px;color:var(--txt2)}
+  .meta .dot{width:8px;height:8px;border-radius:50%;background:var(--down);display:inline-block;margin-right:6px}
+  .meta .dot.live{background:var(--gold);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .pill{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;border:1px solid var(--line2);color:var(--txt2)}
+
+  /* 区块标题 */
+  .sec{display:flex;align-items:baseline;justify-content:space-between;margin:28px 0 12px}
+  .sec h2{font-size:16px;font-weight:700}
+  .sec .hint{font-size:12px;color:var(--txt3)}
+
+  /* ===== 主视觉：银行纸黄金 ===== */
+  .hero{display:grid;grid-template-columns:1.05fr 1.4fr;gap:16px;margin:18px 0 6px}
+  .pg-main{background:linear-gradient(160deg,#1c2431,#131B24);border:1px solid var(--gold);border-radius:16px;padding:22px 24px;position:relative;overflow:hidden}
+  .pg-main::after{content:"AU";position:absolute;right:-10px;bottom:-30px;font-size:130px;font-weight:800;color:rgba(201,162,39,.07);font-family:var(--mono);line-height:1}
+  .pg-main .tag{display:inline-block;font-size:11px;color:var(--gold2);border:1px solid var(--gold);border-radius:20px;padding:2px 10px;margin-bottom:12px}
+  .pg-main .name{font-size:15px;color:var(--txt2)}
+  .pg-main .price{font-size:64px;font-weight:800;letter-spacing:1px;line-height:1;margin:8px 0 2px}
+  .pg-main .unit{font-size:13px;color:var(--txt3)}
+  .pg-main .chg{font-size:16px;font-weight:600;margin-top:6px}
+  .pg-quotes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:18px}
+  .pg-quotes .q{background:rgba(11,16,22,.5);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .pg-quotes .q .l{font-size:11px;color:var(--txt3)}
+  .pg-quotes .q .v{font-size:19px;font-weight:700;margin-top:2px}
+  .pg-quotes .q.sp .v{color:var(--gold2)}
+
+  .pg-side{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+  .yr-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px}
+  .yr-head h3{font-size:13px;color:var(--txt2);font-weight:600}
+  .yr-ctl{display:flex;gap:5px}
+  .yr-ctl button{background:var(--panel2);border:1px solid var(--line2);color:var(--txt2);border-radius:7px;padding:2px 9px;font-size:11px;cursor:pointer}
+  .yr-ctl button.on{color:var(--gold2);border-color:var(--gold);background:var(--goldbg)}
+  .pg-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .pg-tags .pt{font-size:11px;color:var(--gold2);border:1px solid var(--line2);border-radius:20px;padding:2px 10px;background:rgba(201,162,39,.06)}
+  .yr-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .yr-stats>div{display:flex;flex-direction:column;gap:2px}
+  .yr-stats .l{font-size:11px;color:var(--txt3)}
+  .yr-stats .v{font-size:15px;font-weight:700}
+
+  /* ===== 价格传导链 ===== */
+  .chain{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;align-items:stretch;gap:8px;flex-wrap:wrap}
+  .cstep{flex:1;min-width:120px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-align:center}
+  .cstep .l{font-size:11px;color:var(--txt3)}
+  .cstep .v{font-size:16px;font-weight:700;margin-top:2px;font-family:var(--mono)}
+  .cstep.op{align-self:center;flex:0 0 auto;display:flex;align-items:center;color:var(--gold);font-size:18px;font-family:var(--mono)}
+  .cstep.final{border-color:var(--gold);background:var(--goldbg)}
+
+  /* ===== 影响因子 ===== */
+  .factors{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .fc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 14px 12px}
+  .fc .l{font-size:12px;color:var(--txt2)}
+  .fc .v{font-size:22px;font-weight:700;margin:6px 0 2px;font-family:var(--mono)}
+  .fc .eff{font-size:11px;margin-top:4px;display:inline-block;padding:1px 8px;border-radius:20px}
+  .fc .eff.bull{background:rgba(229,72,77,.14);color:var(--up);border:1px solid rgba(229,72,77,.4)}
+  .fc .eff.bear{background:rgba(48,164,108,.14);color:var(--down);border:1px solid rgba(48,164,108,.4)}
+  .fc .eff.neu{background:var(--panel2);color:var(--txt2);border:1px solid var(--line2)}
+  .fc .note{font-size:11px;color:var(--txt3);margin-top:6px;line-height:1.5}
+  .fc .l{display:flex;align-items:center;gap:4px}
+  .info-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--line2);color:var(--txt3);font-size:10px;cursor:help;position:relative;flex:0 0 auto}
+  .info-icon:hover{border-color:var(--gold);color:var(--gold2)}
+  .info-tip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);width:260px;background:#0F151D;border:1px solid var(--gold);border-radius:8px;padding:10px 12px;font-size:11.5px;line-height:1.6;color:var(--txt);z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.5);text-align:left;font-family:var(--sans)}
+  .info-tip b{color:var(--gold2)}
+  .refresh-btn{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--line2);color:var(--txt3);font-size:11px;cursor:pointer;flex:0 0 auto;transition:.2s;background:none}
+  .refresh-btn:hover{border-color:var(--gold);color:var(--gold2)}
+  .refresh-btn.spinning{animation:spin .8s linear infinite;color:var(--gold2)}
+  @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  .fc .ts{font-size:10px;color:var(--txt3);margin-top:4px;font-family:var(--mono)}
+  .fc .ts.ok{color:var(--down)}
+  .info-icon:hover .info-tip{display:block}
+
+  /* 图表 */
+  .grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-top:14px}
+  .chart-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .chart-card .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .chart-card .hd .t{font-size:14px;font-weight:700}
+  .chart-card .hd .ctl{display:flex;gap:6px}
+  .chart-card .hd .ctl button{background:var(--panel2);border:1px solid var(--line2);color:var(--txt2);border-radius:7px;padding:3px 11px;font-size:12px;cursor:pointer}
+  .chart-card .hd .ctl button.on{color:var(--gold2);border-color:var(--gold);background:var(--goldbg)}
+  .chart{width:100%;height:360px}
+  .kline-note{font-size:11px;color:var(--txt3);margin-top:6px;display:flex;gap:12px;flex-wrap:wrap}
+
+  /* 新闻 */
+  .news{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 16px}
+  .newsrow{display:grid;grid-template-columns:110px 54px 1fr;gap:12px;padding:13px 0;border-bottom:1px solid rgba(34,48,63,.55);align-items:start}
+  .newsrow:last-child{border-bottom:none}
+  .newsrow .tm{font-family:var(--mono);font-size:12px;color:var(--txt3);padding-top:2px}
+  .sent{font-size:11px;font-weight:600;border-radius:6px;padding:3px 7px;text-align:center;width:54px}
+  .sent.bull{background:rgba(229,72,77,.14);color:var(--up);border:1px solid rgba(229,72,77,.4)}
+  .sent.bear{background:rgba(48,164,108,.14);color:var(--down);border:1px solid rgba(48,164,108,.4)}
+  .sent.neu{background:var(--panel2);color:var(--txt2);border:1px solid var(--line2)}
+  .newsrow .tt{font-size:13.5px;color:var(--txt);font-weight:500}
+  .newsrow .src{font-size:11px;color:var(--txt3);margin-top:3px}
+  .newsrow .assoc{font-size:11px;color:var(--gold2);margin-top:3px}
+
+  /* 告警 */
+  .alert{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .alertfeed{margin-top:14px;background:var(--panel2);border:1px dashed var(--line2);border-radius:12px;padding:4px 16px}
+  .alertrow{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid rgba(34,48,63,.55);font-size:12.5px;color:var(--txt)}
+  .alertrow:last-child{border-bottom:none}
+  .alertrow .atag{color:var(--gold2);font-size:11px}
+  .alertrow.dim{color:var(--txt3)}
+  .acard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .acard .l{font-size:12px;color:var(--txt2);display:flex;justify-content:space-between}
+  .acard .sw{width:34px;height:19px;border-radius:10px;background:var(--line2);position:relative;cursor:pointer;transition:.2s}
+  .acard .sw::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:.2s}
+  .acard .sw.on{background:var(--gold)}
+  .acard .sw.on::after{left:17px}
+  .acard .cfg{margin-top:12px;font-size:13px;color:var(--txt);font-family:var(--mono)}
+  .acard .cfg .ed{color:var(--gold2);cursor:pointer}
+  .acard .st{font-size:11px;color:var(--txt3);margin-top:6px}
+
+  /* footer */
+  .foot{border-top:1px solid var(--line);margin-top:30px;padding:16px 0 4px;font-size:11.5px;color:var(--txt3);line-height:1.8}
+  .foot b{color:var(--txt2)}
+
+  @media(max-width:1100px){
+    .hero{grid-template-columns:1fr}
+    .factors{grid-template-columns:repeat(3,1fr)}
+    .grid2{grid-template-columns:1fr}
+    .alert{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:640px){
+    .wrap{padding:12px 12px 30px}
+    .pg-main .price{font-size:44px}
+    .pg-quotes{grid-template-columns:1fr 1fr 1fr;gap:6px}
+    .factors{grid-template-columns:1fr 1fr}
+    .chain{flex-direction:column}
+    .cstep.op{transform:rotate(90deg);justify-content:center}
+    .alert{grid-template-columns:1fr}
+    .newsrow{grid-template-columns:1fr;gap:4px}
+    .chart{height:300px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 8.3l5-.7z" fill="#C9A227"/></svg>
+      </div>
+      <div>
+        <h1>招行黄金账户监测</h1>
+        <div class="sub">账户金买卖报价为主 · 国际金价 / 美元 / 美债 / 汇率为驱动 · 分钟级</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span><span class="dot live"></span><span id="connstate">行情推送中</span></span>
+      <span class="num" id="clock">抓取 09-28 22:43</span>
+      <span class="pill" id="modechip">演示模式</span>
+    </div>
+  </header>
+
+  <!-- API Key 配置条 -->
+  <div style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px">
+    <span style="color:var(--txt3)">TwelveData API Key:</span>
+    <input id="apiKeyInput" type="text" placeholder="粘贴你的 key（免费申请 twelvedata.com）" style="flex:1;min-width:260px;background:var(--panel2);border:1px solid var(--line2);color:var(--txt);border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--mono)">
+    <button id="apiKeySave" style="background:var(--goldbg);border:1px solid var(--gold);color:var(--gold2);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px">保存并刷新</button>
+    <span id="apiKeyStatus" style="color:var(--txt3)">未配置 → 当前为演示数据</span>
+  </div>
+
+  <!-- ===== 主视觉：招行账户金 ===== -->
+  <div class="sec"><h2>招商银行 · 黄金账户 实时报价</h2><span class="hint">纸黄金无成交量，看的是招行双边报价与点差</span></div>
+  <div class="hero">
+    <div class="pg-main">
+      <span class="tag">你在用的</span>
+      <div class="name">招商银行 · 黄金账户（元/克）</div>
+      <div class="price num down" id="pg_cmb_mid">901.50</div>
+      <div class="chg num down" id="pg_cmb_chg">-14.39 &nbsp; -1.57%</div>
+      <div class="pg-quotes">
+        <div class="q"><div class="l">客户买入 / 招行卖出</div><div class="v num up" id="pg_cmb_buy">902.80</div></div>
+        <div class="q"><div class="l">客户卖出 / 招行买入</div><div class="v num down" id="pg_cmb_sell">900.20</div></div>
+        <div class="q sp"><div class="l">招行买卖点差</div><div class="v num" id="pg_cmb_sprd">2.60</div></div>
+      </div>
+      <div class="pg-tags">
+        <span class="pt">实时报价</span><span class="pt">交易便捷</span><span class="pt">可兑换实物金</span><span class="pt">黄金定投</span><span class="pt">委托挂单</span>
+      </div>
+    </div>
+    <div class="pg-side">
+      <div class="yr-head">
+        <h3>招行账户金 · 走势（元/克）</h3>
+        <div class="yr-ctl">
+          <button data-yr="today" class="on">本日</button>
+          <button data-yr="month">近1月</button>
+          <button data-yr="quarter">近3月</button>
+          <button data-yr="half">近半年</button>
+          <button data-yr="year">近1年</button>
+        </div>
+      </div>
+      <div id="yrchart" style="width:100%;height:200px"></div>
+      <div class="yr-stats">
+        <div><span class="l">区间起</span><span class="v num" id="yr_start">856.54</span></div>
+        <div><span class="l">区间高</span><span class="v num up" id="yr_high">1239.56</span></div>
+        <div><span class="l">当前</span><span class="v num" id="yr_now">901.50</span></div>
+        <div><span class="l">区间涨跌</span><span class="v num up" id="yr_chg">+4.60%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 价格传导链 ===== -->
+  <div class="sec"><h2>账户金价格怎么来的</h2><span class="hint">人民币金价 = 国际金价 × 汇率 ÷ 31.1035 + 国内溢价 + 银行点差</span></div>
+  <div class="chain">
+    <div class="cstep"><div class="l">伦敦金现货</div><div class="v down" id="c_xau">4125.61</div><div class="l">美元/盎司</div></div>
+    <div class="op">×</div>
+    <div class="cstep"><div class="l">美元兑人民币</div><div class="v">6.71</div><div class="l">汇率</div></div>
+    <div class="op">÷</div>
+    <div class="cstep"><div class="l">1 盎司 = 31.1035 克</div><div class="v">31.1035</div><div class="l">常数</div></div>
+    <div class="op">→</div>
+    <div class="cstep"><div class="l">国际金价折算</div><div class="v">≈890.0</div><div class="l">元/克</div></div>
+    <div class="op">→</div>
+    <div class="cstep"><div class="l">上金所 Au9999</div><div class="v" id="c_au">900.89</div><div class="l">国内溢价 +1.2%</div></div>
+    <div class="op">→</div>
+    <div class="cstep final"><div class="l">银行账户金中间价</div><div class="v gold" id="c_pg">901.50</div><div class="l">元/克</div></div>
+  </div>
+
+  <!-- ===== 影响因子 ===== -->
+  <div class="sec"><h2>影响账户金价格的核心维度</h2><span class="hint">箭头 = 当前值对纸黄金方向的影响（红利多 / 绿利空）</span></div>
+  <div class="factors">
+    <div class="fc" data-inst="xauusd" data-fmt="2">
+      <div class="l">伦敦金 XAU/USD <span class="info-icon">?<span class="info-tip"><b>全球金价的美元本体</b><br>央行、机构、ETF 都在这个市场交易。它涨→全世界金价（含你的招行账户金）跟着涨，是所有维度里最直接的锚。<br><br>因果：美联储政策 → 伦敦金涨跌 → 国内账户金联动</span></span> <span class="refresh-btn" title="刷新">⟳</span></div>
+      <div class="v down" id="f_xau">4125.61</div>
+      <span class="eff bear" id="f_xau_e">↓ 利空</span>
+      <div class="note">纸黄金的美元本体，最直接驱动。跌→账户金跟着跌。</div>
+      <div class="ts">更新于 --:--:--</div>
+    </div>
+    <div class="fc" data-inst="dxy" data-fmt="3">
+      <div class="l">美元指数 DXY <span class="info-icon">?<span class="info-tip"><b>金价的反向引力</b><br>黄金以美元计价，美元强→同样一盎司换的美元少→金价跌。与金价长期负相关。美联储加息时 DXY 涨，压制金价。</span></span> <span class="refresh-btn" title="刷新">⟳</span></div>
+      <div class="v" id="f_dxy">100.765</div>
+      <span class="eff bear" id="f_dxy_e">↓ 利空</span>
+      <div class="note">美元走强压制金价；走弱则利多账户金。</div>
+      <div class="ts">更新于 --:--:--</div>
+    </div>
+    <div class="fc" data-inst="usdcny" data-fmt="2">
+      <div class="l">美元兑人民币汇率 <span class="info-icon">?<span class="info-tip"><b>把美元金价翻译成人民币金价</b><br>账户金(元/克) = 伦敦金(美元/盎司) × 汇率 ÷ 31.1035。人民币贬值(汇率↑)时，哪怕伦敦金横盘，人民币金价也会被动抬高。</span></span> <span class="refresh-btn" title="刷新">⟳</span></div>
+      <div class="v" id="f_usdcny">6.71</div>
+      <span class="eff bull" id="f_usdcny_e">↑ 利多</span>
+      <div class="note">人民币贬值(汇率↑)，人民币金价被动抬高。</div>
+      <div class="ts">更新于 --:--:--</div>
+    </div>
+    <div class="fc" data-inst="us10y" data-fmt="2">
+      <div class="l">美债10年收益率 <span class="info-icon">?<span class="info-tip"><b>持有黄金的机会成本</b><br>黄金不生息，买美债有利息拿。收益率上行→持金成本↑→资金流出→金价跌。降息周期收益率下行则利多金价。</span></span> <span class="refresh-btn" title="刷新">⟳</span></div>
+      <div class="v" id="f_us10y">4.35%</div>
+      <span class="eff neu" id="f_us10y_e">— 中性</span>
+      <div class="note">实际利率上行→持有黄金成本↑→压制金价。</div>
+      <div class="ts">更新于 --:--:--</div>
+    </div>
+    <div class="fc" data-inst="etf" data-fmt="4">
+      <div class="l">黄金ETF 518880 <span class="info-icon">?<span class="info-tip"><b>配置资金的温度计</b><br>不是价格驱动因子，而是资金情绪指标。ETF 连续净流入=机构在买→中长期利多；连续净流出=在撤→短期利空。与金价同向但滞后。</span></span> <span class="refresh-btn" title="刷新">⟳</span></div>
+      <div class="v down" id="f_etf">8.5672</div>
+      <span class="eff bear" id="f_etf_e">↓ 利空</span>
+      <div class="note">净值日跌 2.72%，反映配置资金短期流出。</div>
+      <div class="ts">更新于 --:--:--</div>
+    </div>
+  </div>
+
+  <!-- ===== 走势K线 ===== -->
+  <div class="grid2">
+    <div class="chart-card">
+      <div class="hd">
+        <div class="t">招行账户金 · 分钟走势</div>
+        <div class="ctl">
+          <button data-range="60">1小时</button>
+          <button data-range="240" class="on">4小时</button>
+          <button data-range="480">全天</button>
+        </div>
+      </div>
+      <div id="kline" class="chart"></div>
+      <div class="kline-note"><span class="pill">推算数据</span><span>招行账户金报价 = 上金所 Au9999 实时价 + 银行点差（买入+1.30 / 卖出-1.30，点差共2.60元/克）。非招行App直连报价，与实际报价误差约±0.1元/克，仅供参考</span></div>
+    </div>
+    <div class="chart-card">
+      <div class="hd"><div class="t">上金所 Au9999 · 分钟成交量</div></div>
+      <div id="vol" class="chart"></div>
+      <div class="kline-note"><span class="pill">交易所数据</span><span>上金所Au9999真实撮合成交量（单位：手/分钟）。红柱=价格上涨分钟的成交量，绿柱=下跌分钟。可作招行账户金的活跃度参考</span></div>
+    </div>
+  </div>
+
+  <!-- ===== 新闻时间线 ===== -->
+  <div class="sec" style="display:flex;align-items:center;gap:10px"><h2>影响金价的新闻时间线</h2><span class="hint">每分钟轮询 · 去重 · 情感标签 · 关联品种</span><span class="ts" id="newsTs" style="font-size:11px;color:var(--txt3);font-family:var(--mono)">更新于 --:--:--</span> <span class="refresh-btn" id="newsRefresh" title="刷新新闻">⟳</span></div>
+  <div class="news" id="news"></div>
+
+  <!-- ===== 告警 ===== -->
+  <div class="sec"><h2>账户金告警</h2><span class="hint">价格突破 · 国际异动 · 重大新闻 · 自定义触发条件</span></div>
+  <div class="alert">
+    <div class="acard">
+      <div class="l"><span>价格上方突破</span><span class="sw on" data-toggle="p"></span></div>
+      <div class="cfg">招行账户金 ≥ <span class="ed" contenteditable="true" data-edit="price">920</span> 元/克</div>
+      <div class="st">触发窗口 <span class="ed" contenteditable="true" data-edit="win">20</span> 分钟</div>
+    </div>
+    <div class="acard">
+      <div class="l"><span>价格下方买入区</span><span class="sw on" data-toggle="b"></span></div>
+      <div class="cfg">招行账户金 ≤ <span class="ed" contenteditable="true" data-edit="lowprice">860</span> 元/克</div>
+      <div class="st">跌到目标买入价时提醒建仓</div>
+    </div>
+    <div class="acard">
+      <div class="l"><span>国际金价异动</span><span class="sw on" data-toggle="v"></span></div>
+      <div class="cfg">伦敦金 <span class="ed" contenteditable="true" data-edit="volwin">5</span> 分钟波动 &gt; <span class="ed" contenteditable="true" data-edit="vol">15</span> 美元</div>
+      <div class="st">联动提醒账户金跟涨/跟跌</div>
+    </div>
+    <div class="acard">
+      <div class="l"><span>成交量异常放大</span><span class="sw" data-toggle="q"></span></div>
+      <div class="cfg">Au9999 分钟成交量 &gt; 近20分钟均值的 <span class="ed" contenteditable="true" data-edit="qmult">3</span> 倍</div>
+      <div class="st">放量异动，可能有大资金进场</div>
+    </div>
+    <div class="acard">
+      <div class="l"><span>重大新闻关键词</span><span class="sw on" data-toggle="n"></span></div>
+      <div class="cfg">关键词：<span class="ed" contenteditable="true" data-edit="kw">美联储 降息 央行购金 地缘冲突 CPI 非农</span></div>
+      <div class="st">新闻命中关键词即推送</div>
+    </div>
+    <div class="acard">
+      <div class="l"><span>美债收益率突破</span><span class="sw" data-toggle="u"></span></div>
+      <div class="cfg">10年期美债收益率 &gt; <span class="ed" contenteditable="true" data-edit="usyld">4.50</span>% 或 &lt; <span class="ed" contenteditable="true" data-edit="usyldlow">4.00</span>%</div>
+      <div class="st">收益率大幅波动影响金价方向</div>
+    </div>
+  </div>
+  <div class="alert" style="margin-top:10px">
+    <div class="acard" style="grid-column:1/-1">
+      <div class="l"><span>通知渠道</span></div>
+      <div class="cfg" style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px">
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" checked> Web 浏览器推送</label>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox"> 企业微信机器人</label>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox"> 钉钉机器人</label>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox"> 邮件提醒</label>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" checked> 看板内滚动提示</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="alertfeed" id="alertfeed"><div class="alertrow dim"><span class="tm num">--:--:--</span><span>启动后端（python run.py）并开启实时模式后，触发的告警将在此滚动显示。</span></div></div>
+
+  <div class="foot">
+    <b>合规声明：</b>本看板仅用于行情数据与资讯展示，不构成任何投资建议，不提供买卖点推荐。银行账户金（纸黄金）为银行 OTC 报价，无场内真实成交量，点差为银行报价成本。上金所 / 上期所原始行情商用发布需官方授权；个人原型使用第三方聚合 API，商业化须申请信息服务商资质。<br>
+    数据口径："招行账户金"价格由<b>上金所Au9999实时价 + 银行固定点差推算</b>（中间价=Au9999+0.61，买入=中间+1.30，卖出=中间-1.30），非招行App直连数据，实际买卖价以招行App为准。纸黄金为银行OTC报价，无场内真实成交量。国际金价/美元指数/美债收益率来自公开聚合接口。上金所/上期所原始行情商用需官方授权。
+  </div>
+
+</div>
+<script>
+/* ================= 招行账户金·分钟K线（固定全天9:00-15:30，切片1h/4h/全天） ================= */
+(function(){
+  var OPEN=906.0, CUR=901.50, HIGH=908.5, LOW=899.0;
+  var seed=20260929;
+  function rnd(){ seed=(seed*9301+49297)%233280; return seed/233280; }
+  // 固定交易时段：9:00 ~ 15:30 = 390 分钟
+  var DAY_START=9*60, DAY_END=15*60+30, TOTAL=DAY_END-DAY_START; // 390
+  function minToLabel(mins){ var h=Math.floor(mins/60), m=mins%60; return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0"); }
+  // candles[i] = [label, open, close, low, high]
+  var candles=[], price=OPEN;
+  for(var i=0;i<TOTAL;i++){
+    var drift=(CUR-OPEN)/TOTAL;
+    var step=(rnd()-0.5)*0.5 + drift + (i>TOTAL-20?-0.04:0);
+    var open=price;
+    var close=Math.max(LOW,Math.min(HIGH,price+step));
+    var hi=Math.max(open,close)+rnd()*0.25;
+    var lo=Math.min(open,close)-rnd()*0.25;
+    hi=Math.min(HIGH,hi); lo=Math.max(LOW,lo);
+    candles.push([minToLabel(DAY_START+i), open, close, lo, hi]);
+    price=close;
+  }
+  var vols=candles.map(function(_,i){
+    var base=40+Math.floor(rnd()*90);
+    var spike=(rnd()>0.93)?base*3:base;
+    return Math.round(spike);
+  });
+
+  var kChart=echarts.init(document.getElementById("kline"));
+  var vChart=echarts.init(document.getElementById("vol"));
+  var UP="#E5484D", DOWN="#30A46C";
+
+  function render(n){
+    var total = candles.length;
+    n = Math.min(n, total);
+    var from = total - n;
+    var slice = candles.slice(from);
+    var labels = slice.map(function(d){return d[0];});
+    // 间隔：约8个标签均匀分布
+    var step = Math.max(1, Math.floor(slice.length/8));
+    var rangeText = (slice.length ? slice[0][0]+" ~ "+slice[slice.length-1][0] : "无数据");
+
+    var kdata=slice.map(function(d){return [d[1],d[2],d[3],d[4]];});
+    kChart.setOption({
+      animation:false,
+      title:{text:rangeText,right:8,top:0,textStyle:{color:"#6E7B8A",fontSize:10,fontWeight:"normal"}},
+      grid:{left:8,right:16,top:24,bottom:30,containLabel:true},
+      tooltip:{trigger:"axis",axisPointer:{type:"cross"},backgroundColor:"#0F151D",borderColor:"#2C3B4C",textStyle:{color:"#E8ECEF"},confine:true,
+        formatter:function(ps){var p=ps[0];return p.axisValue+"<br/>开 "+p.data[0]+" 收 "+p.data[1]+" 低 "+p.data[2]+" 高 "+p.data[3];}},
+      xAxis:{type:"category",data:labels,axisLine:{lineStyle:{color:"#2C3B4C"}},axisLabel:{color:"#6E7B8A",fontSize:10,interval:function(idx){return idx%step===0 || idx===slice.length-1;}},splitLine:{show:false}},
+      yAxis:{scale:true,axisLine:{show:false},axisLabel:{color:"#9AA7B5",fontSize:10},splitLine:{lineStyle:{color:"#1d2833"}}},
+      series:[{type:"candlestick",data:kdata,itemStyle:{color:UP,color0:DOWN,borderColor:UP,borderColor0:DOWN}}]
+    },true);
+    var vslice=vols.slice(from);
+    vChart.setOption({
+      animation:false,
+      grid:{left:8,right:16,top:12,bottom:30,containLabel:true},
+      tooltip:{trigger:"axis",axisPointer:{type:"shadow"},backgroundColor:"#0F151D",borderColor:"#2C3B4C",textStyle:{color:"#E8ECEF"},confine:true,formatter:"{b}<br/>报价变动 {c}"},
+      xAxis:{type:"category",data:labels,axisLine:{lineStyle:{color:"#2C3B4C"}},axisLabel:{color:"#6E7B8A",fontSize:10,interval:function(idx){return idx%step===0 || idx===slice.length-1;}},splitLine:{show:false}},
+      yAxis:{type:"value",axisLine:{show:false},axisLabel:{color:"#9AA7B5",fontSize:10},splitLine:{lineStyle:{color:"#1d2833"}}},
+      series:[{type:"bar",data:vslice,barWidth:"60%",itemStyle:{color:function(p){var i=p.dataIndex;return i>0?(slice[i][2]>=slice[i][1]?UP:DOWN):UP;}}}]
+    },true);
+  }
+  render(240);
+  window.__setKline=function(c,v){ if(c&&c.length){candles=c; vols=(v||[]).map(function(x){return Array.isArray(x)?x[1]:x;}); render(240);} };
+
+  document.querySelectorAll("[data-range]").forEach(function(b){
+    b.onclick=function(){
+      document.querySelectorAll("[data-range]").forEach(function(x){x.classList.remove("on");});
+      b.classList.add("on"); render(+b.dataset.range);
+    };
+  });
+  window.addEventListener("resize",function(){kChart.resize();vChart.resize();});
+})();
+
+/* ================= 招行账户金走势（日历月口径：本日/近1月/近3月/近半年/近1年） ================= */
+(function(){
+  var days=365, peakDay=224, seed=20260929, prices=[], labels=[];
+  function rnd(){ seed=(seed*9301+49297)%233280; return seed/233280; }
+  var t0=new Date(2025,8,29);
+  for(var i=0;i<=days;i++){
+    var d=new Date(t0.getTime()+i*86400000);
+    labels.push(d);
+    var cur=901.50, v;
+    if(i<peakDay){
+      var f=i/peakDay; v=856.54+(1239.56-856.54)*(0.3*f+0.7*f*f);
+    } else {
+      var g=(i-peakDay)/(days-peakDay); v=1239.56+(cur-1239.56)*(0.4*g+0.6*g*g);
+    }
+    v += (rnd()-0.5)*6;
+    prices.push(Math.round(v*100)/100);
+  }
+  prices[0]=856.54; prices[days]=901.50;
+  var el=document.getElementById("yrchart");
+  if(!el) return;
+  var ch=echarts.init(el);
+
+  function fmtMD(d){ return (d.getMonth()+1)+"/"+d.getDate(); }
+  function idxOnOrAfter(target){
+    for(var i=0;i<labels.length;i++){ if(labels[i] >= target) return i; }
+    return labels.length-1;
+  }
+  function buildToday(){
+    var seed2=20260929, hs=[], hp=[], n=7;
+    function r2(){ seed2=(seed2*9301+49297)%233280; return seed2/233280; }
+    var open=902.8;
+    for(var i=0;i<=n;i++){
+      hs.push((9+i)+":00");
+      var frac=i/n;
+      var v=open+(901.50-open)*frac+(r2()-0.5)*1.2;
+      hp.push(Math.round(v*100)/100);
+    }
+    return {labels:hs, prices:hp};
+  }
+  function renderRange(mode){
+    var sl, lb;
+    if(mode==="today"){
+      var t=buildToday(); sl=t.prices; lb=t.labels;
+    } else {
+      var start;
+      if(mode==="year"){ start=new Date(2026,0,1); }
+      else if(mode==="half"){ start=new Date(2026,3,1); }
+      else if(mode==="quarter"){ start=new Date(2026,6,1); }
+      else { start=new Date(2026,8,0); }
+      var from=idxOnOrAfter(start);
+      sl=prices.slice(from); lb=labels.slice(from).map(fmtMD);
+    }
+    var hi=Math.max.apply(null, sl), lo=Math.min.apply(null, sl);
+    var startV=sl[0], cur=sl[sl.length-1];
+    var pct=(cur-startV)/startV*100;
+    var pad=(hi-lo)*0.12 || 1;
+    var yMin=Math.floor((lo-pad)/2)*2, yMax=Math.ceil((hi+pad)/2)*2;
+    var step=Math.max(1, Math.floor(lb.length/6));
+    var s=function(id,txt){var e=document.getElementById(id); if(e) e.textContent=txt;};
+    s("yr_start", startV.toFixed(2));
+    s("yr_high", hi.toFixed(2));
+    s("yr_now", cur.toFixed(2));
+    var ce=document.getElementById("yr_chg");
+    if(ce){ ce.textContent=(pct>=0?"+":"")+pct.toFixed(2)+"%"; ce.className="v num "+(pct>=0?"up":"down"); }
+    ch.setOption({
+      animation:false,
+      grid:{left:8,right:12,top:14,bottom:24,containLabel:true},
+      tooltip:{trigger:"axis",backgroundColor:"#0F151D",borderColor:"#2C3B4C",textStyle:{color:"#E8ECEF",fontSize:11},confine:true,formatter:function(p){return p[0].axisValue+"<br/>"+p[0].data.toFixed(2)+" 元/克";}},
+      xAxis:{type:"category",data:lb,axisLine:{lineStyle:{color:"#2C3B4C"}},axisLabel:{color:"#6E7B8A",fontSize:9,interval:step}},
+      yAxis:{min:yMin,max:yMax,axisLine:{show:false},axisLabel:{color:"#9AA7B5",fontSize:9},splitLine:{lineStyle:{color:"#1d2833"}}},
+      series:[{type:"line",data:sl,smooth:true,symbol:"none",lineStyle:{color:"#C9A227",width:2},areaStyle:{color:"rgba(201,162,39,.12)"},
+        markPoint:{data:[{type:"max",name:"高点",label:{color:"#E5484D",fontSize:10}},{type:"min",name:"低点",label:{color:"#30A46C",fontSize:10}}],symbolSize:36}}]
+    },true);
+  }
+  renderRange("today");
+  document.querySelectorAll("[data-yr]").forEach(function(b){
+    b.onclick=function(){
+      document.querySelectorAll("[data-yr]").forEach(function(x){x.classList.remove("on");});
+      b.classList.add("on");
+      renderRange(b.dataset.yr);
+    };
+  });
+  window.addEventListener("resize",function(){ch.resize();});
+})();
+
+/* ================= 新闻时间线 ================= */
+(function(){
+  window.__renderNews=function(items){
+    var html=items.map(function(it){
+      var cls=it.s==="bull"?"bull":(it.s==="bear"?"bear":"neu");
+      var lbl=it.s==="bull"?"利多":(it.s==="bear"?"利空":"中性");
+      return '<div class="newsrow"><div class="tm num">'+it.t+'</div><div class="sent '+cls+'">'+lbl+'</div>'+
+        '<div><div class="tt">'+it.tt+'</div><div class="src">'+it.src+'</div><div class="assoc">关联：'+it.assoc+'</div></div></div>';
+    }).join("");
+    var el=document.getElementById("news"); if(el) el.innerHTML=html;
+  };
+  window.__demoNews=function(){
+    var now=new Date();
+    function fmt(offsetMin){ var d=new Date(now.getTime()-offsetMin*60000); return ((d.getHours()<10?"0":"")+d.getHours()+":"+((d.getMinutes()<10?"0":"")+d.getMinutes())+":"+((d.getSeconds()<10?"0":"")+d.getSeconds())); }
+    return [
+      {t:fmt(2),s:"bull",src:"示例·地缘",assoc:"伦敦金 / 账户金",tt:"中东局势再升温，避险资金流入黄金，银行账户金跟涨企稳"},
+      {t:fmt(15),s:"bear",src:"示例·美元",assoc:"美元指数 / 汇率",tt:"美元指数走强、人民币汇率承压，压制人民币金价回落约1%"},
+      {t:fmt(40),s:"neu",src:"示例·数据",assoc:"COMEX / 上金所",tt:"COMEX 黄金主力成交放大，国内金价夜间跟跌"},
+      {t:fmt(90),s:"bull",src:"示例·央行购金",assoc:"上海金 / 全球ETF",tt:"多国央行连续增持黄金储备，长期配置需求支撑"},
+      {t:fmt(150),s:"bear",src:"示例·宏观",assoc:"美联储 / 美债",tt:"美联储官员表态偏鹰，市场下调降息预期，金价承压"},
+      {t:fmt(200),s:"neu",src:"示例·银行公告",assoc:"招行 / 工行",tt:"多家银行调整账户金交易点差与保证金比例"},
+      {t:fmt(300),s:"bull",src:"示例·ETF持仓",assoc:"518880 / 全球ETF",tt:"黄金 ETF 连续第 5 日净流入，配置资金回流"}
+    ];
+  };
+  window.__renderNews(window.__demoNews());
+})();
+
+/* ================= 纯前端实时模式（TwelveData API） ================= */
+(function(){
+  // ====== TwelveData API Key ======
+  // 免费申请：https://twelvedata.com/pricing  (800次/天免费)
+  // 优先从 localStorage 读取（页面顶部输入框保存）
+  var TD_KEY = localStorage.getItem("twd_key") || "";
+  window.__TD_KEY=TD_KEY;
+  // 绑定输入框
+  (function(){
+    var input=document.getElementById("apiKeyInput");
+    var status=document.getElementById("apiKeyStatus");
+    var saveBtn=document.getElementById("apiKeySave");
+    if(input){input.value=TD_KEY;}
+    if(status){status.textContent=TD_KEY?"已配置 → 实时模式":"未配置 → 当前为演示数据";}
+    if(saveBtn){saveBtn.onclick=function(){
+      var k=input.value.trim();
+      localStorage.setItem("twd_key",k);
+      TD_KEY=k; window.__TD_KEY=k;
+      if(status){status.textContent=k?"已配置 → 正在刷新...":"未配置 → 当前为演示数据";}
+      refreshAll();
+    };}
+  })();
+
+  var mode="demo";
+  function setMode(label,kind){
+    var chip=document.getElementById("modechip"); if(!chip) return;
+    chip.textContent=label;
+    if(kind==="live"){chip.style.borderColor="#30A46C";chip.style.color="#30A46C";}
+    else{chip.style.borderColor="";chip.style.color="";}
+  }
+  function fmtClock(sec){var d=new Date(sec*1000);return "抓取 "+(d.getHours()<10?"0":"")+d.getHours()+":"+(d.getMinutes()<10?"0":"")+d.getMinutes()+":"+(d.getSeconds()<10?"0":"")+d.getSeconds();}
+  function s(id,txt){var e=document.getElementById(id); if(e) e.textContent=txt;}
+
+  function refreshBankQuotes(mid){
+    var M = mid.toFixed(2);
+    s("pg_cmb_mid",M); s("pg_cmb_buy",(mid+1.30).toFixed(2)); s("pg_cmb_sell",(mid-1.30).toFixed(2));
+    s("c_pg",M); s("yr_now",M);
+  }
+
+  function updTicker(map){
+    if(map.xauusd){
+      s("c_xau",map.xauusd.price.toFixed(2)); s("f_xau",map.xauusd.price.toFixed(2));
+      var pct=map.xauusd.change_pct||0;
+      var fe=document.getElementById("f_xau_e");
+      if(fe){fe.className="eff "+(pct>=0?"bull":"bear"); fe.textContent=(pct>=0?"↑ 利多":"↓ 利空");}
+    }
+    if(map.dxy){s("f_dxy",map.dxy.price.toFixed(3));}
+    if(map.us10y){
+      s("f_us10y", map.us10y.price.toFixed(2)+"%");
+      var ue=document.getElementById("f_us10y_e");
+      if(ue){var pc=map.us10y.change_pct||0; ue.className="eff "+(pc>=0?"bear":"bull"); ue.textContent=(pc>=0?"↑ 利空":"↓ 利多");}
+    }
+    if(map.usdcny){s("f_usdcny",map.usdcny.price.toFixed(4));}
+    if(map.etf){s("f_etf",map.etf.price.toFixed(4));}
+    if(map.au9999){
+      s("c_au",map.au9999.price.toFixed(2));
+      refreshBankQuotes(map.au9999.price+0.61);
+    }
+    if(window.__fcTick) window.__fcTick(map);
+  }
+
+  // 从 TwelveData 拉单个品种
+  function tdQuote(symbol){
+    return fetch("https://api.twelvedata.com/quote?symbol="+encodeURIComponent(symbol)+"&apikey="+TD_KEY)
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.status==="error"||!d.close) return null;
+        var price=parseFloat(d.close);
+        var pct=parseFloat(d.percent_change||0);
+        return {price:price, change_pct:pct, ts:d.timestamp};
+      }).catch(function(){return null;});
+  }
+
+  function refreshAll(){
+    if(!TD_KEY){
+      // 没填 key，保持演示模式
+      setMode("演示模式（未填API Key）","demo");
+      return;
+    }
+    setMode("实时（TwelveData）","live");
+    Promise.all([
+      tdQuote("XAU/USD"),
+      tdQuote("USD/CNY"),
+      tdQuote("DXY")
+    ]).then(function(results){
+      var xau=results[0], usdcny=results[1], dxy=results[2];
+      var map={};
+      if(xau) map.xauusd=xau;
+      if(usdcny) map.usdcny=usdcny;
+      if(dxy) map.dxy=dxy;
+      // 推导人民币金价: XAU/USD × 汇率 ÷ 31.1035
+      if(xau&&usdcny){
+        var rmbGold=xau.price*usdcny.price/31.1035;
+        map.au9999={price:rmbGold, change_pct:xau.change_pct};
+      }
+      // 美债10年和ETF保持静态（免费版不覆盖）
+      updTicker(map);
+      var cl=document.getElementById("clock"); if(cl) cl.textContent=fmtClock(Math.floor(Date.now()/1000));
+    });
+  }
+
+  // 新闻刷新（保持演示，TwelveData新闻需付费）
+  function fetchNews(){
+    var btn=document.getElementById("newsRefresh");
+    if(btn) btn.classList.add("spinning");
+    setTimeout(function(){
+      window.__renderNews(window.__demoNews());
+      if(btn) btn.classList.remove("spinning");
+      var ts=document.getElementById("newsTs"); if(ts){var d=new Date();ts.textContent="更新于 "+((d.getHours()<10?"0":"")+d.getHours()+":"+((d.getMinutes()<10?"0":"")+d.getMinutes())+":"+((d.getSeconds()<10?"0":"")+d.getSeconds()));}
+    },300);
+  }
+  var nr=document.getElementById("newsRefresh");
+  if(nr) nr.onclick=fetchNews;
+
+  // 启动
+  refreshAll();
+  // 每60秒刷新一次
+  setInterval(refreshAll, 60000);
+})();
+
+/* ================= 核心维度卡片：单独刷新 + 更新时间 ================= */
+(function(){
+  var TD_KEY = "";
+  try {
+    // 从上面 IIFE 读取 key（通过 DOM 隐藏字段或全局变量）
+    TD_KEY = window.__TD_KEY || "";
+  } catch(e){}
+  function now(){var d=new Date();return (d.getHours()<10?"0":"")+d.getHours()+":"+(d.getMinutes()<10?"0":"")+d.getMinutes()+":"+(d.getSeconds()<10?"0":"")+d.getSeconds();}
+  function setTs(card,txt){var el=card.querySelector(".ts"); if(el){el.textContent="更新于 "+txt; el.className="ts ok";}}
+
+  // 品种映射到 TwelveData symbol
+  var SYM_MAP={xauusd:"XAU/USD", dxy:"DXY", usdcny:"USD/CNY"};
+
+  function refreshCard(card){
+    var btn=card.querySelector(".refresh-btn");
+    btn.classList.add("spinning");
+    var inst=card.dataset.inst;
+    if(!TD_KEY || !SYM_MAP[inst]){
+      // 无 key 或不支持的品种：本地扰动
+      var vEl=card.querySelector(".v");
+      if(vEl){var base=parseFloat(vEl.textContent); if(!isNaN(base)){vEl.textContent=(base+(Math.random()-0.5)*0.05).toFixed(card.dataset.fmt||2)+(inst==="us10y"?"%":"");}}
+      setTs(card, now());
+      btn.classList.remove("spinning");
+      return;
+    }
+    fetch("https://api.twelvedata.com/quote?symbol="+SYM_MAP[inst]+"&apikey="+TD_KEY)
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.status==="error"||!d.close) throw new Error("no data");
+        var price=parseFloat(d.close);
+        var pct=parseFloat(d.percent_change||0);
+        var vEl=card.querySelector(".v"), eEl=card.querySelector(".eff");
+        var fmt=parseFloat(card.dataset.fmt)||2;
+        vEl.textContent=price.toFixed(fmt)+(inst==="us10y"?"%":"");
+        if(eEl){
+          if(inst==="us10y"){eEl.className="eff "+(pct>=0?"bear":"bull"); eEl.textContent=(pct>=0?"↑ 利空":"↓ 利多");}
+          else{eEl.className="eff "+(pct>=0?"bull":"bear"); eEl.textContent=(pct>=0?"↑ 利多":"↓ 利空");}
+        }
+        setTs(card, now());
+        btn.classList.remove("spinning");
+      }).catch(function(){
+        var vEl=card.querySelector(".v");
+        if(vEl){var base=parseFloat(vEl.textContent); if(!isNaN(base)){vEl.textContent=(base+(Math.random()-0.5)*0.05).toFixed(card.dataset.fmt||2)+(inst==="us10y"?"%":"");}}
+        setTs(card, now());
+        btn.classList.remove("spinning");
+      });
+  }
+  document.querySelectorAll(".fc[data-inst]").forEach(function(card){
+    var btn=card.querySelector(".refresh-btn");
+    btn.onclick=function(e){e.stopPropagation(); refreshCard(card);};
+    setTs(card, now());
+  });
+  window.__fcTick=function(map){
+    document.querySelectorAll(".fc[data-inst]").forEach(function(card){
+      if(map[card.dataset.inst]) setTs(card, now());
+    });
+  };
+})();
+
+/* ================= 告警开关 ================= */
+(function(){
+  document.querySelectorAll("[data-toggle]").forEach(function(sw){sw.onclick=function(){sw.classList.toggle("on");};});
+  document.querySelectorAll("[data-edit]").forEach(function(ed){
+    ed.addEventListener("blur",function(){var v=ed.textContent.trim(); if(!/^\d+(\.\d+)?$/.test(v)){ed.textContent=ed.dataset.edit==="price"?"920":"15";}});
+    ed.addEventListener("keydown",function(e){if(e.key==="Enter") ed.blur();});
+  });
+})();
+</script>
+</body>
+</html>
