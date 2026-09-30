@@ -213,7 +213,7 @@
   </div>
   <div style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px">
     <span style="color:var(--txt3)">校准招行报价：</span>
-    <input id="calibInput" type="number" step="0.01" placeholder="打开招行App看到的当前中间价" style="width:140px;background:var(--panel2);border:1px solid var(--line2);color:var(--txt);border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--mono)">
+    <input id="calibInput" type="number" step="0.01" placeholder="招行App当前买入价" style="width:140px;background:var(--panel2);border:1px solid var(--line2);color:var(--txt);border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--mono)">
     <button id="calibSave" style="background:var(--goldbg);border:1px solid var(--gold);color:var(--gold2);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px">校准</button>
     <span id="calibStatus" style="color:var(--txt3)">未校准，使用默认公式</span>
   </div>
@@ -629,7 +629,9 @@
       // 当前推算的中间价
       var auEl=document.getElementById("c_au");
       var currentCalc=parseFloat(auEl?auEl.textContent:"900");
-      var offset = cmbPrice - (currentCalc+0.61);
+      // 买入价 = au9999推算价 + 0.61 + 校准偏移 + 1.30(银行点差)
+      // 希望 买入价 = 用户输入的招行价
+      var offset = cmbPrice - currentCalc - 0.61 - 1.30;
       CALIB_OFFSET = offset;
       localStorage.setItem("calib_offset", offset);
       if(status){status.textContent="已校准，偏移 "+offset.toFixed(2)+" 元/克";}
